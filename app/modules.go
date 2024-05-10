@@ -50,6 +50,7 @@ import (
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
 	ibcclientclient "github.com/cosmos/ibc-go/v7/modules/core/02-client/client"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
 	"github.com/evmos/ethermint/x/evm"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/evmos/ethermint/x/feemarket"
@@ -176,7 +177,7 @@ func appModules(
 			app.SlashingKeeper,
 			app.AccountKeeper,
 			app.BankKeeper,
-			app.StakingKeeper,
+			app.ConsumerKeeper,
 			app.GetSubspace(slashingtypes.ModuleName),
 		),
 		distr.NewAppModule(
@@ -249,6 +250,7 @@ func orderBeginBlockers() []string {
 		feetypes.ModuleName,
 		//self module
 		btcstakingtypes.ModuleName,
+		ccvconsumertypes.ModuleName,
 	}
 }
 
@@ -286,6 +288,7 @@ func orderEndBlockers() []string {
 		feetypes.ModuleName,
 		//self module
 		btcstakingtypes.ModuleName,
+		ccvconsumertypes.ModuleName,
 	}
 }
 
@@ -300,7 +303,7 @@ can do so safely.
 func orderInitBlockers() []string {
 	return []string{
 		feetypes.ModuleName,
-		
+
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
@@ -326,6 +329,9 @@ func orderInitBlockers() []string {
 		//self module
 		btclightclienttypes.ModuleName,
 		btcstakingtypes.ModuleName,
+
+		//ccv
+		ccvconsumertypes.ModuleName,
 
 		// NOTE: crisis module must go at the end to check for invariants on each module
 		crisistypes.ModuleName,

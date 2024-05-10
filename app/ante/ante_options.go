@@ -12,12 +12,15 @@ import (
 	bbn "github.com/Lorenzo-Protocol/lorenzo/types"
 	feekeeper "github.com/Lorenzo-Protocol/lorenzo/x/fee/keeper"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+
+	consumerkeeper "github.com/cosmos/interchain-security/v4/x/ccv/consumer/keeper"
 )
 
 type HandlerOptions struct {
 	AccountKeeper          *authkeeper.AccountKeeper
 	BankKeeper             bankkeeper.Keeper
 	IBCKeeper              *ibckeeper.Keeper
+	ConsumerKeeper         consumerkeeper.Keeper
 	FeeMarketKeeper        ethante.FeeMarketKeeper
 	EvmKeeper              ethante.EVMKeeper
 	FeegrantKeeper         ante.FeegrantKeeper

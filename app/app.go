@@ -105,6 +105,12 @@ import (
 	btclightclienttypes "github.com/Lorenzo-Protocol/lorenzo/x/btclightclient/types"
 	feekeeper "github.com/Lorenzo-Protocol/lorenzo/x/fee/keeper"
 	feetypes "github.com/Lorenzo-Protocol/lorenzo/x/fee/types"
+
+	//CCV Consumer
+	ccvconsumer "github.com/cosmos/interchain-security/v4/x/ccv/consumer"
+	ccvconsumerkeeper "github.com/cosmos/interchain-security/v4/x/ccv/consumer/keeper"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
+	ccv "github.com/cosmos/interchain-security/v4/x/ccv/types"
 )
 
 var (
@@ -155,6 +161,7 @@ type LorenzoApp struct {
 	TransferKeeper        ibctransferkeeper.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	ConsensusParamsKeeper consensuskeeper.Keeper
+	ConsumerKeeper        ccvconsumerkeeper.Keeper
 
 	BTCLightClientKeeper btclightclientkeeper.Keeper
 	FeeKeeper            *feekeeper.Keeper
@@ -166,8 +173,9 @@ type LorenzoApp struct {
 	FeeMarketKeeper feemarketkeeper.Keeper
 
 	// make scoped keepers public for test purposes
-	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
-	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
+	ScopedIBCKeeper         capabilitykeeper.ScopedKeeper
+	ScopedTransferKeeper    capabilitykeeper.ScopedKeeper
+	ScopedCCVConsumerKeeper capabilitykeeper.ScopedKeeper
 
 	// the module manager
 	mm *module.Manager
@@ -229,7 +237,7 @@ func NewLorenzoApp(
 		upgradetypes.StoreKey,
 		feegrant.StoreKey,
 		consensustypes.StoreKey,
-
+		ccvconsumertypes.StoreKey,
 		evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey,
 		capabilitytypes.StoreKey,
@@ -285,6 +293,7 @@ func NewLorenzoApp(
 	// grant capabilities for the ibc and ibc-transfer modules
 	scopedIBCKeeper := app.CapabilityKeeper.ScopeToModule(ibcexported.ModuleName)
 	scopedTransferKeeper := app.CapabilityKeeper.ScopeToModule(ibctransfertypes.ModuleName)
+	scopedCCVConsumerKeeper := app.CapabilityKeeper.ScopeToModule(ccvconsumertypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/scopedKeeper
 
 	app.CapabilityKeeper.Seal()
@@ -342,7 +351,7 @@ func NewLorenzoApp(
 		appCodec,
 		cdc,
 		keys[slashingtypes.StoreKey],
-		app.StakingKeeper,
+		&app.ConsumerKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	app.CrisisKeeper = crisiskeeper.NewKeeper(
@@ -383,12 +392,19 @@ func NewLorenzoApp(
 		nil, geth.NewEVM, tracer, app.GetSubspace(evmtypes.ModuleName),
 	)
 
+	// pre-initialize ConsumerKeeper to satsfy ibckeeper.NewKeeper
+	app.ConsumerKeeper = ccvconsumerkeeper.NewNonZeroKeeper(
+		appCodec,
+		keys[ccvconsumertypes.StoreKey],
+		app.GetSubspace(ccvconsumertypes.ModuleName),
+	)
+
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
 		appCodec,
 		keys[ibcexported.StoreKey],
 		app.GetSubspace(ibcexported.ModuleName),
-		app.StakingKeeper,
+		&app.ConsumerKeeper,
 		app.UpgradeKeeper,
 		scopedIBCKeeper,
 	)
@@ -410,7 +426,7 @@ func NewLorenzoApp(
 	app.EvidenceKeeper = evidencekeeper.NewKeeper(
 		appCodec,
 		keys[evidencetypes.StoreKey],
-		app.StakingKeeper,
+		&app.ConsumerKeeper,
 		app.SlashingKeeper,
 	)
 
@@ -425,6 +441,26 @@ func NewLorenzoApp(
 		govConfig,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+
+	app.ConsumerKeeper = ccvconsumerkeeper.NewKeeper(
+		appCodec,
+		keys[ccvconsumertypes.StoreKey],
+		app.GetSubspace(ccvconsumertypes.ModuleName),
+		scopedCCVConsumerKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		&app.IBCKeeper.PortKeeper,
+		app.IBCKeeper.ConnectionKeeper,
+		app.IBCKeeper.ClientKeeper,
+		app.SlashingKeeper,
+		app.BankKeeper,
+		app.AccountKeeper,
+		app.TransferKeeper,
+		app.IBCKeeper,
+		authtypes.FeeCollectorName,
+	)
+
+	app.ConsumerKeeper = *app.ConsumerKeeper.SetHooks(app.SlashingKeeper.Hooks())
+	consumerModule := ccvconsumer.NewAppModule(app.ConsumerKeeper, app.GetSubspace(ccvconsumertypes.ModuleName))
 
 	// Register the proposal types
 	// Deprecated: Avoid adding new handlers, instead use the new proposal flow
@@ -462,7 +498,8 @@ func NewLorenzoApp(
 
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := ibcporttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack).
+		AddRoute(ccvconsumertypes.ModuleName, consumerModule)
 	// this line is used by starport scaffolding # ibc/app/router
 	app.IBCKeeper.SetRouter(ibcRouter)
 
@@ -513,6 +550,7 @@ func NewLorenzoApp(
 		AccountKeeper:          &app.AccountKeeper,
 		BankKeeper:             app.BankKeeper,
 		IBCKeeper:              app.IBCKeeper,
+		ConsumerKeeper:         app.ConsumerKeeper,
 		FeeMarketKeeper:        app.FeeMarketKeeper,
 		EvmKeeper:              app.EvmKeeper,
 		FeegrantKeeper:         app.FeeGrantKeeper,
@@ -520,7 +558,7 @@ func NewLorenzoApp(
 		MaxTxGasWanted:         maxGasWanted,
 		ExtensionOptionChecker: nil, // uses default
 		BtcConfig:              btcConfig,
-		FeeKeeper :             app.FeeKeeper,
+		FeeKeeper:              app.FeeKeeper,
 	})
 	if err != nil {
 		panic(err)
@@ -540,6 +578,7 @@ func NewLorenzoApp(
 
 	app.ScopedIBCKeeper = scopedIBCKeeper
 	app.ScopedTransferKeeper = scopedTransferKeeper
+	app.ScopedCCVConsumerKeeper = scopedCCVConsumerKeeper
 
 	// this line is used by starport scaffolding # stargate/app/beforeInitReturn
 
@@ -692,7 +731,7 @@ func (app *LorenzoApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
 
 // GetStakingKeeper implements ibctesting.TestingApp
 func (app *LorenzoApp) GetStakingKeeper() ibctestingtypes.StakingKeeper {
-	return app.StakingKeeper
+	return app.ConsumerKeeper
 }
 
 // GetTxConfig implements ibctesting.TestingApp
@@ -740,6 +779,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	// ibc
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)
+
+	//ccv
+	paramsKeeper.Subspace(ccvconsumertypes.ModuleName).WithKeyTable(ccv.ParamKeyTable())
 
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 

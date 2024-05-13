@@ -107,6 +107,7 @@ import (
 	feetypes "github.com/Lorenzo-Protocol/lorenzo/x/fee/types"
 
 	//CCV Consumer
+
 	ccvconsumer "github.com/cosmos/interchain-security/v4/x/ccv/consumer"
 	ccvconsumerkeeper "github.com/cosmos/interchain-security/v4/x/ccv/consumer/keeper"
 	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
@@ -460,7 +461,7 @@ func NewLorenzoApp(
 	)
 
 	app.ConsumerKeeper = *app.ConsumerKeeper.SetHooks(app.SlashingKeeper.Hooks())
-	consumerModule := ccvconsumer.NewAppModule(app.ConsumerKeeper, app.GetSubspace(ccvconsumertypes.ModuleName))
+	//consumerModule := ccvconsumer.NewAppModule(app.ConsumerKeeper, app.GetSubspace(ccvconsumertypes.ModuleName))
 
 	// Register the proposal types
 	// Deprecated: Avoid adding new handlers, instead use the new proposal flow
@@ -495,6 +496,7 @@ func NewLorenzoApp(
 
 	var transferStack ibcporttypes.IBCModule
 	transferStack = ibctransfer.NewIBCModule(app.TransferKeeper)
+	consumerModule := ccvconsumer.NewAppModule(app.ConsumerKeeper, app.GetSubspace(ccvconsumertypes.ModuleName))
 
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := ibcporttypes.NewRouter()
@@ -510,7 +512,9 @@ func NewLorenzoApp(
 	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(appModules(app, encodingConfig, skipGenesisInvariants)...)
+	app.mm = module.NewManager(
+		append(appModules(app, encodingConfig, skipGenesisInvariants), consumerModule)...,
+	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the

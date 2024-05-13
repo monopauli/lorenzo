@@ -40,7 +40,6 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
@@ -52,6 +51,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ccvconsumer "github.com/cosmos/interchain-security/v4/x/ccv/consumer"
 	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
+	ccvstaking "github.com/cosmos/interchain-security/v4/x/ccv/democracy/staking"
 	"github.com/evmos/ethermint/x/evm"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/evmos/ethermint/x/feemarket"
@@ -89,7 +89,7 @@ var (
 		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 		bank.AppModuleBasic{},
 		capability.AppModuleBasic{},
-		staking.AppModuleBasic{},
+		ccvstaking.AppModuleBasic{},
 		mint.AppModuleBasic{},
 		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(getGovProposalHandlers()),
@@ -137,6 +137,10 @@ func appModules(
 ) []module.AppModule {
 	appCodec := encodingConfig.Codec
 	return []module.AppModule{
+		genutil.NewAppModule(
+			app.AccountKeeper, app.StakingKeeper, app.BaseApp.DeliverTx,
+			encodingConfig.TxConfig,
+		),
 		auth.NewAppModule(
 			appCodec,
 			app.AccountKeeper,
@@ -188,17 +192,17 @@ func appModules(
 			app.StakingKeeper,
 			app.GetSubspace(distrtypes.ModuleName),
 		),
-		staking.NewAppModule(
+		ccvstaking.NewAppModule(
 			appCodec,
-			app.StakingKeeper,
+			*app.StakingKeeper,
 			app.AccountKeeper,
 			app.BankKeeper,
 			app.GetSubspace(stakingtypes.ModuleName),
 		),
-		ccvconsumer.NewAppModule(
-			app.ConsumerKeeper,
-			app.GetSubspace(ccvconsumertypes.ModuleName),
-		),
+		// ccvconsumer.NewAppModule(
+		// 	app.ConsumerKeeper,
+		// 	app.GetSubspace(ccvconsumertypes.ModuleName),
+		// ),
 		upgrade.NewAppModule(app.UpgradeKeeper),
 		evidence.NewAppModule(*app.EvidenceKeeper),
 		ibc.NewAppModule(app.IBCKeeper),
@@ -243,6 +247,7 @@ func orderBeginBlockers() []string {
 		banktypes.ModuleName,
 		govtypes.ModuleName,
 		crisistypes.ModuleName,
+		ccvconsumertypes.ModuleName,
 		genutiltypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
@@ -254,7 +259,6 @@ func orderBeginBlockers() []string {
 		feetypes.ModuleName,
 		//self module
 		btcstakingtypes.ModuleName,
-		ccvconsumertypes.ModuleName,
 	}
 }
 
@@ -269,13 +273,13 @@ thus, gov.EndBlock must be executed before staking.EndBlock
 func orderEndBlockers() []string {
 	return []string{
 		crisistypes.ModuleName,
-		genutiltypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
+		ccvconsumertypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
@@ -284,8 +288,8 @@ func orderEndBlockers() []string {
 		minttypes.ModuleName,
 		evidencetypes.ModuleName,
 		authz.ModuleName,
+		genutiltypes.ModuleName,
 		feegrant.ModuleName,
-		ccvconsumertypes.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,

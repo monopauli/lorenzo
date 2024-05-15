@@ -32,7 +32,6 @@ import (
 	tmconfig "github.com/cometbft/cometbft/config"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/types"
-	tmtime "github.com/cometbft/cometbft/types/time"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -49,8 +48,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	gtypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -344,23 +341,23 @@ func initTestnetFiles(
 			CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
 		})
 
-		valTokens := sdk.TokensFromConsensusPower(100, ethermint.PowerReduction)
-		createValMsg, err := stakingtypes.NewMsgCreateValidator(
-			sdk.ValAddress(addr),
-			valPubKeys[i],
-			sdk.NewCoin(appparams.BaseDenom, valTokens),
-			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
-			stakingtypes.NewCommissionRates(sdk.OneDec(), sdk.OneDec(), sdk.OneDec()),
-			sdk.OneInt(),
-		)
+		//valTokens := sdk.TokensFromConsensusPower(100, ethermint.PowerReduction)
+		// createValMsg, err := stakingtypes.NewMsgCreateValidator(
+		// 	sdk.ValAddress(addr),
+		// 	valPubKeys[i],
+		// 	sdk.NewCoin(appparams.BaseDenom, valTokens),
+		// 	stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
+		// 	stakingtypes.NewCommissionRates(sdk.OneDec(), sdk.OneDec(), sdk.OneDec()),
+		// 	sdk.OneInt(),
+		// )
 		if err != nil {
 			return err
 		}
 
 		txBuilder := clientCtx.TxConfig.NewTxBuilder()
-		if err := txBuilder.SetMsgs(createValMsg); err != nil {
-			return err
-		}
+		// if err := txBuilder.SetMsgs(createValMsg); err != nil {
+		// 	return err
+		// }
 
 		txBuilder.SetMemo(memo)
 
@@ -393,13 +390,13 @@ func initTestnetFiles(
 		return err
 	}
 
-	err := collectGenFiles(
-		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator,
-	)
-	if err != nil {
-		return err
-	}
+	// err := collectGenFiles(
+	// 	clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
+	// 	args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator,
+	// )
+	// if err != nil {
+	// 	return err
+	// }
 
 	cmd.PrintErrf("Successfully initialized %d node directories\n", args.numValidators)
 	return nil
@@ -511,50 +508,50 @@ func initGenFiles(
 	return nil
 }
 
-func collectGenFiles(
-	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
-	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator,
-) error {
-	var appState json.RawMessage
-	genTime := tmtime.Now()
+// func collectGenFiles(
+// 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
+// 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
+// 	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator,
+// ) error {
+// 	var appState json.RawMessage
+// 	genTime := tmtime.Now()
 
-	for i := 0; i < numValidators; i++ {
-		nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
-		nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
-		gentxsDir := filepath.Join(outputDir, "gentxs")
-		nodeConfig.Moniker = nodeDirName
+// 	for i := 0; i < numValidators; i++ {
+// 		nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
+// 		nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
+// 		gentxsDir := filepath.Join(outputDir, "gentxs")
+// 		nodeConfig.Moniker = nodeDirName
 
-		nodeConfig.SetRoot(nodeDir)
+// 		nodeConfig.SetRoot(nodeDir)
 
-		nodeID, valPubKey := nodeIDs[i], valPubKeys[i]
-		initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
+// 		nodeID, valPubKey := nodeIDs[i], valPubKeys[i]
+// 		initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
 
-		genDoc, err := types.GenesisDocFromFile(nodeConfig.GenesisFile())
-		if err != nil {
-			return err
-		}
+// 		genDoc, err := types.GenesisDocFromFile(nodeConfig.GenesisFile())
+// 		if err != nil {
+// 			return err
+// 		}
 
-		nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, *genDoc, genBalIterator, gtypes.DefaultMessageValidator)
-		if err != nil {
-			return err
-		}
+// 		nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, *genDoc, genBalIterator, gtypes.DefaultMessageValidator)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		if appState == nil {
-			// set the canonical application state (they should not differ)
-			appState = nodeAppState
-		}
+// 		if appState == nil {
+// 			// set the canonical application state (they should not differ)
+// 			appState = nodeAppState
+// 		}
 
-		genFile := nodeConfig.GenesisFile()
+// 		genFile := nodeConfig.GenesisFile()
 
-		// overwrite each validator's genesis file to have a canonical genesis time
-		if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, appState, genTime); err != nil {
-			return err
-		}
-	}
+// 		// overwrite each validator's genesis file to have a canonical genesis time
+// 		if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, appState, genTime); err != nil {
+// 			return err
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func getIP(i int, startingIPAddr string) (ip string, err error) {
 	if len(startingIPAddr) == 0 {

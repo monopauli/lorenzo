@@ -22,8 +22,6 @@ import (
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
@@ -91,7 +89,7 @@ var (
 		capability.AppModuleBasic{},
 		ccvstaking.AppModuleBasic{},
 		mint.AppModuleBasic{},
-		distr.AppModuleBasic{},
+		//distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(getGovProposalHandlers()),
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},
@@ -114,8 +112,8 @@ var (
 	)
 	// module account permissions
 	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:                    nil,
-		distrtypes.ModuleName:                         nil,
+		authtypes.FeeCollectorName: nil,
+		//distrtypes.ModuleName:                         nil,
 		minttypes.ModuleName:                          {authtypes.Minter},
 		stakingtypes.BondedPoolName:                   {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName:                {authtypes.Burner, authtypes.Staking},
@@ -184,14 +182,14 @@ func appModules(
 			app.ConsumerKeeper,
 			app.GetSubspace(slashingtypes.ModuleName),
 		),
-		distr.NewAppModule(
-			appCodec,
-			app.DistrKeeper,
-			app.AccountKeeper,
-			app.BankKeeper,
-			app.StakingKeeper,
-			app.GetSubspace(distrtypes.ModuleName),
-		),
+		// distr.NewAppModule(
+		// 	appCodec,
+		// 	app.DistrKeeper,
+		// 	app.AccountKeeper,
+		// 	app.BankKeeper,
+		// 	app.StakingKeeper,
+		// 	app.GetSubspace(distrtypes.ModuleName),
+		// ),
 		ccvstaking.NewAppModule(
 			appCodec,
 			*app.StakingKeeper,
@@ -239,7 +237,7 @@ func orderBeginBlockers() []string {
 		minttypes.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
-		distrtypes.ModuleName,
+		//distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
@@ -283,7 +281,7 @@ func orderEndBlockers() []string {
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		distrtypes.ModuleName,
+		//distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		minttypes.ModuleName,
 		evidencetypes.ModuleName,
@@ -314,7 +312,7 @@ func orderInitBlockers() []string {
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		distrtypes.ModuleName,
+		//distrtypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		genutiltypes.ModuleName,

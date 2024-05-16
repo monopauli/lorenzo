@@ -350,9 +350,9 @@ func initTestnetFiles(
 		// 	stakingtypes.NewCommissionRates(sdk.OneDec(), sdk.OneDec(), sdk.OneDec()),
 		// 	sdk.OneInt(),
 		// )
-		if err != nil {
-			return err
-		}
+		// if err != nil {
+		// 	return err
+		// }
 
 		txBuilder := clientCtx.TxConfig.NewTxBuilder()
 		// if err := txBuilder.SetMsgs(createValMsg); err != nil {

@@ -87,6 +87,7 @@ import (
 	ibcclienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	ibcporttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
+	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	ibctestingtypes "github.com/cosmos/ibc-go/v7/testing/types"
 
 	// tendermint
@@ -461,6 +462,9 @@ func NewLorenzoApp(
 		authtypes.FeeCollectorName,
 	)
 
+	//Register IBC Clients
+	app.registerIBCClients()
+
 	app.ConsumerKeeper = *app.ConsumerKeeper.SetHooks(app.SlashingKeeper.Hooks())
 	//consumerModule := ccvconsumer.NewAppModule(app.ConsumerKeeper, app.GetSubspace(ccvconsumertypes.ModuleName))
 
@@ -746,6 +750,17 @@ func (app *LorenzoApp) GetTxConfig() client.TxConfig {
 
 func (app *LorenzoApp) ExportState(ctx sdk.Context) map[string]json.RawMessage {
 	return app.mm.ExportGenesis(ctx, app.AppCodec())
+}
+
+func (app *LorenzoApp) registerIBCClients() {
+	app.interfaceRegistry.RegisterImplementations(
+		(*ibcexported.ClientState)(nil),
+		&tmclient.ClientState{},
+	)
+	app.interfaceRegistry.RegisterImplementations(
+		(*ibcexported.ConsensusState)(nil),
+		&tmclient.ConsensusState{},
+	)
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
